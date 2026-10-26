@@ -1,5 +1,7 @@
 # SEO skills pour Claude Code
 
+![SEO-TAM : du dépôt GitHub à l'analyse, la priorisation et l'action](docs/seo-tam-illustration.webp)
+
 ## seo-tam-forecast
 
 Projection du trafic organique et des conversions d'un groupe de mots-clés, avec la méthode du TAM (Total Addressable Market) :
