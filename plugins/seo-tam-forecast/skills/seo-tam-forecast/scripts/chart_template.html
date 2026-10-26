@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface-1: #1a1a19;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px;
+    background: var(--page);
+    color: var(--text-primary);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .card {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .subtitle { margin: 4px 0 16px; color: var(--text-secondary); font-size: 13px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { display: inline-block; width: 16px; height: 2px; border-radius: 1px; }
+  .plot { position: relative; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+  .tooltip {
+    position: absolute; top: 0; pointer-events: none; opacity: 0;
+    min-width: 180px; padding: 8px 12px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    font-size: 13px; transition: opacity 80ms;
+  }
+  .tooltip .month { font-weight: 600; margin-bottom: 4px; }
+  .tooltip .row { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+  .tooltip .row b { margin-left: auto; color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tooltip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  details { margin-top: 16px; color: var(--text-secondary); }
+  summary { cursor: pointer; font-size: 13px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 13px; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-secondary); font-weight: 600; }
+  td { color: var(--text-primary); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1 id="title"></h1>
+  <p class="subtitle" id="subtitle"></p>
+  <div class="legend" id="legend"></div>
+  <div class="plot" id="plot">
+    <svg id="chart" role="img"></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+  <details>
+    <summary>Voir les données</summary>
+    <div class="table-wrap"><table id="table"></table></div>
+  </details>
+</div>
+<script>
+const DATA = __DATA__;
+const COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
+const fmt = new Intl.NumberFormat("fr-FR");
+const fmtCompact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
+const NS = "http://www.w3.org/2000/svg";
+
+document.getElementById("title").textContent = DATA.title;
+document.getElementById("subtitle").textContent = DATA.subtitle;
+document.getElementById("chart").setAttribute("aria-label", DATA.title + ". " + DATA.series.map(s => s.name).join(", "));
+
+const legend = document.getElementById("legend");
+DATA.series.forEach((s, i) => {
+  const item = document.createElement("span");
+  item.innerHTML = `<i style="background:${COLORS[i]}"></i>`;
+  item.append(s.name);
+  legend.append(item);
+});
+
+const table = document.getElementById("table");
+table.innerHTML = "<thead><tr><th>Mois</th>" + DATA.series.map(s => `<th>${s.name}</th>`).join("") + "</tr></thead><tbody>" +
+  DATA.months.map((m, j) => `<tr><td>${m}</td>` + DATA.series.map(s => `<td>${fmt.format(s.values[j])}</td>`).join("") + "</tr>").join("") +
+  "</tbody>";
+
+function niceMax(v) {
+  const step = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * step >= v) return m * step;
+  return 10 * step;
+}
+
+function el(name, attrs, parent) {
+  const node = document.createElementNS(NS, name);
+  for (const k in attrs) node.setAttribute(k, attrs[k]);
+  if (parent) parent.append(node);
+  return node;
+}
+
+function render() {
+  const svg = document.getElementById("chart");
+  const tooltip = document.getElementById("tooltip");
+  svg.replaceChildren();
+  const W = Math.max(320, document.getElementById("plot").clientWidth);
+  const narrow = W < 560;
+  const H = narrow ? 260 : 340;
+  const m = { top: 16, right: narrow ? 16 : 132, bottom: 32, left: 48 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  const all = DATA.series.flatMap(s => s.values);
+  const yMax = niceMax(Math.max(...all) * 1.05);
+  const x = j => m.left + (j / (DATA.months.length - 1)) * iw;
+  const y = v => m.top + ih - (v / yMax) * ih;
+
+  // Grille et axe Y
+  for (let k = 0; k <= 4; k++) {
+    const v = (yMax / 4) * k;
+    el("line", { x1: m.left, x2: m.left + iw, y1: y(v), y2: y(v), stroke: k === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }, svg);
+    const t = el("text", { x: m.left - 8, y: y(v) + 4, "text-anchor": "end", fill: "var(--text-muted)" }, svg);
+    t.textContent = fmtCompact.format(v);
+  }
+  // Axe X
+  DATA.months.forEach((mo, j) => {
+    if (narrow && j % 2) return;
+    const t = el("text", { x: x(j), y: H - 8, "text-anchor": "middle", fill: "var(--text-muted)" }, svg);
+    t.textContent = mo;
+  });
+
+  // Courbes
+  DATA.series.forEach((s, i) => {
+    const d = s.values.map((v, j) => (j ? "L" : "M") + x(j).toFixed(1) + "," + y(v).toFixed(1)).join("");
+    el("path", { d, fill: "none", stroke: COLORS[i], "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    const last = s.values.length - 1;
+    el("circle", { cx: x(last), cy: y(s.values[last]), r: 4, fill: COLORS[i], stroke: "var(--surface-1)", "stroke-width": 2 }, svg);
+  });
+
+  // Libellés directs en bout de courbe (écartés si trop proches)
+  if (!narrow) {
+    const last = DATA.months.length - 1;
+    const labels = DATA.series.map((s, i) => ({ i, y: y(s.values[last]), text: s.name.split(" (")[0] + " · " + fmtCompact.format(s.values[last]) }))
+      .sort((a, b) => a.y - b.y);
+    for (let k = 1; k < labels.length; k++) labels[k].y = Math.max(labels[k].y, labels[k - 1].y + 16);
+    labels.forEach(l => {
+      const t = el("text", { x: x(last) + 10, y: l.y + 4, fill: "var(--text-secondary)" }, svg);
+      t.textContent = l.text;
+    });
+  }
+
+  // Survol : réticule + infobulle
+  const cross = el("line", { y1: m.top, y2: m.top + ih, stroke: "var(--axis)", "stroke-width": 1, opacity: 0 }, svg);
+  const dots = DATA.series.map((s, i) => el("circle", { r: 4, fill: COLORS[i], stroke: "var(--surface-1)", "stroke-width": 2, opacity: 0 }, svg));
+  const hit = el("rect", { x: m.left - 12, y: m.top, width: iw + 24, height: ih, fill: "transparent" }, svg);
+  const show = evt => {
+    const rect = svg.getBoundingClientRect();
+    const px = (evt.clientX - rect.left) * (W / rect.width);
+    const j = Math.max(0, Math.min(DATA.months.length - 1, Math.round(((px - m.left) / iw) * (DATA.months.length - 1))));
+    cross.setAttribute("x1", x(j)); cross.setAttribute("x2", x(j)); cross.setAttribute("opacity", 1);
+    dots.forEach((dot, i) => { dot.setAttribute("cx", x(j)); dot.setAttribute("cy", y(DATA.series[i].values[j])); dot.setAttribute("opacity", 1); });
+    tooltip.innerHTML = `<div class="month">${DATA.months[j]}</div>` + DATA.series.map((s, i) =>
+      `<div class="row"><i style="background:${COLORS[i]}"></i>${s.name.split(" (")[0]}<b>${fmt.format(s.values[j])}</b></div>`).join("");
+    const scale = rect.width / W;
+    const left = x(j) * scale;
+    const tw = tooltip.offsetWidth;
+    tooltip.style.left = (left + 12 + tw > rect.width ? left - 12 - tw : left + 12) + "px";
+    tooltip.style.top = m.top * scale + "px";
+    tooltip.style.opacity = 1;
+  };
+  const hide = () => { cross.setAttribute("opacity", 0); dots.forEach(d => d.setAttribute("opacity", 0)); tooltip.style.opacity = 0; };
+  hit.addEventListener("pointermove", show);
+  hit.addEventListener("pointerdown", show);
+  hit.addEventListener("pointerleave", hide);
+}
+
+render();
+let pending;
+window.addEventListener("resize", () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(render); });
+</script>
+</body>
+</html>

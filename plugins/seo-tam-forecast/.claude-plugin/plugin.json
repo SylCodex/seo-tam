@@ -1,0 +1,13 @@
+{
+  "name": "seo-tam-forecast",
+  "displayName": "SEO TAM Forecast",
+  "version": "1.0.0",
+  "description": "Projection du trafic organique et des conversions d'un groupe de mots-clés (méthode TAM) : CTR réels du site depuis la Search Console, 3 scénarios, saisonnalité et graphique mensuel",
+  "author": {
+    "name": "Sylvain Charbit",
+    "url": "https://www.sylvaincharbit.com"
+  },
+  "homepage": "https://github.com/SylCodex/seo-tam",
+  "repository": "https://github.com/SylCodex/seo-tam",
+  "keywords": ["seo", "forecast", "trafic organique", "search console", "tam"]
+}
